@@ -1,54 +1,80 @@
+#include <stdbool.h>
+
 #include "./darr.h"
 
-darr_error_type darr_alloc(darr* darr, unsigned count) {
-  darr->items = calloc(1, count * sizeof(void*));
+bool darr_alloc(darr* darr, unsigned count) {
+  darr->items = calloc(1, (count + 1) * sizeof(void*));
   if(darr->items == NULL) {
-    darr->capacity = 0;
-    return alloc_error;
+    darr_reset(darr);
+    return false;
   } else {
-    darr->capacity = count;
-    return ok;
+    darr_set_cap(darr, count);
+    return true;
   }
 }
 
-darr_error_type darr_realloc(darr* darr, unsigned count) {
-  darr->items = realloc(darr->items, count * sizeof(void*));
+bool darr_realloc(darr* darr, unsigned count) {
+  darr->items = realloc(darr->items, (count + 1) * sizeof(void*));
   if(darr->items == NULL) {
-    darr->capacity = 0;
-    return alloc_error;
+    darr_reset(darr);
+    return false;
   } else {
-    darr->capacity = count;
-    return ok;
+    darr_set_cap(darr, count);
+    return true;
   }
 }
 
-darr_error_type darr_init(darr* darr, unsigned capacity) {
-  darr->items = calloc(1, capacity * sizeof(darr->items));
-  if(darr->items == NULL) {
-    darr->capacity = 0;
-    return init_error;
+bool darr_init(darr* darr, unsigned capacity) {
+  if(darr_alloc(darr, capacity) != true) {
+    return false;
   }
-  darr->capacity = capacity;
-  darr->pre_initialized = 1;
-  return ok;
+  darr_set_cap(darr, capacity);
+  return true;
 }
 
-darr_error_type darr_over_cap(darr* darr) {
-  if(darr->capacity <= 0) {
-    return darr_cap_empty;
-  } else if(darr->count >= darr->capacity) {
-    darr->capacity *= 2;
-    darr->items = realloc(darr->items, darr->capacity * sizeof(void*));
+bool darr_over_cap(darr* darr) {
+  if(darr->count >= darr->capacity) {
+    return true;
   }
-  if(darr->items == NULL) {
-    return alloc_error;
+  return false;
+}
+
+bool darr_append(darr* darr, void* data) {
+  if(darr->capacity == 0) {
+    darr_init(darr, 255);
   } else {
-    return ok;
+    if(darr_over_cap(darr) == ok) {
+      darr->capacity *= 2;
+      darr_realloc(darr, darr->capacity);
+    }
+  }
+  if(darr->items == NULL) {
+    return false;
+  }
+  darr->items[darr->count] = data;
+  darr->count += 1;
+  darr->items[darr->count] = NULL;
+  return false;
+}
+
+bool is_darr_empty(darr darr) {
+  if(darr.capacity <= 0) {
+    return true;
+  } else {
+    return false;
   }
 }
 
-unsigned darr_append_index(darr* darr, void* data, unsigned index) {
-  if(is_darr_empty(*darr) == darr_empty) {
+bool is_darr_full(darr darr) {
+  if(darr.count == darr.capacity) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+darr_error_type darr_append_index(darr* darr, void* data, unsigned index) {
+  if(is_darr_empty(*darr) == true) {
     return darr_empty;
   }
   if(index > darr->capacity) {
@@ -66,45 +92,8 @@ unsigned darr_append_index(darr* darr, void* data, unsigned index) {
   return ok;
 }
 
-unsigned darr_push(darr* darr, void* data) {
-  if(is_darr_empty(*darr) == darr_empty) {
-    return darr_empty;
-  }
-  darr->items[darr->count] = data;
-  darr->count += 1;
-  darr->items[darr->count] = NULL;
-  return ok;
-}
-
-unsigned darr_append(darr* darr, void* data) {
-  if(darr->append_func) {
-    if(darr->append_func(*darr, data) == ok) {
-      return ok;
-    } else {
-      return append_error;
-    }
-  }
-  if(darr->count == 0) {
-    if(darr->pre_initialized == 0) {
-      darr->capacity = 8;
-    }
-    darr_alloc(darr, darr->capacity);
-  } else {
-    if(darr->count >= darr->capacity) {
-      darr_over_cap(darr);
-    } else {
-      darr_realloc(darr, darr->count + 1);
-    }
-  }
-  if(darr->items == NULL) {
-    return alloc_error;
-  }
-  darr_push(darr, data);
-  return ok;
-}
-
-unsigned darr_delete_index(darr* darr, unsigned arr[], unsigned count) {
-  if(is_darr_empty(*darr)) {
+darr_error_type darr_delete_index(darr* darr, unsigned arr[], unsigned count) {
+  if(is_darr_empty(*darr) == true) {
     return darr_empty;
   }
   for(unsigned i = 0; i < darr->count; i++) {
@@ -116,24 +105,43 @@ unsigned darr_delete_index(darr* darr, unsigned arr[], unsigned count) {
   return ok;
 }
 
+void darr_push(darr* darr, void* data) {
+  darr->items[darr->count] = data;
+  darr->count += 1;
+  darr->items[darr->count] = NULL;
+}
+
 void darr_delete(darr* darr) {
   darr->count = 0;
   darr->capacity = 0;
   darr->items = NULL;
 }
-
-darr_error_type is_darr_empty(darr darr) {
-  if(darr.capacity <= 0) {
-    return darr_empty;
-  } else {
-    return darr_not_empty;
-  }
+void darr_reset_cap(darr* darr) {
+  darr->capacity = 0;
 }
 
-unsigned is_darr_full(darr darr) {
-  if(darr.count == darr.capacity) {
-    return 1;
-  } else {
-    return darr_empty;
-  }
+void darr_reset_count(darr* darr) {
+  darr->count = 0;
+}
+
+void darr_set_cap(darr* darr, unsigned capacity) {
+  darr->capacity = capacity;
+}
+
+void darr_double_cap(darr* darr) {
+  darr->capacity *= 2;
+}
+
+void darr_set_count(darr* darr, unsigned count) {
+  darr->count = count;
+}
+
+void darr_inc_count(darr* darr) {
+  darr->count += 1;
+}
+
+void darr_reset(darr* darr) {
+  darr_reset_cap(darr);
+  darr_reset_count(darr);
+  free(darr->items);
 }

@@ -8,33 +8,34 @@
 typedef struct darr {
   unsigned count;
   unsigned capacity;
-  int (*append_func)(struct darr darr, void*);
   void** items;
-  char pre_initialized;
 } darr;
 
-typedef enum darr_error_type {
-  append_error = 0,
+typedef enum darr_return_type {
   ok = 1,
   delete_error = 2,
-  init_error = 3,
-  darr_empty = 4,
-  darr_not_empty = 5,
-  alloc_error = 6,
-  darr_cap_empty = 7,
-  index_out_of_range = 8,
+  darr_empty = 3,
+  alloc_error = 4,
+  index_out_of_range = 5,
 } darr_error_type;
 
-darr_error_type darr_alloc(darr* darr, unsigned count);
-darr_error_type darr_realloc(darr* darr, unsigned count);
-darr_error_type darr_init(darr* darr, unsigned capacity);
-darr_error_type darr_over_cap(darr* darr);
+bool darr_alloc(darr* darr, unsigned count);
+bool darr_realloc(darr* darr, unsigned count);
+bool darr_init(darr* darr, unsigned capacity);
+bool darr_over_cap(darr* darr);
+bool darr_append(darr* darr, void* data);
+bool is_darr_empty(darr darr);
+bool is_darr_full(darr darr);
 darr_error_type darr_append_index(darr* darr, void* data, unsigned index);
-darr_error_type darr_push(darr* darr, void* data);
-darr_error_type darr_append(darr* darr, void* data);
 darr_error_type darr_delete_index(darr* darr, unsigned arr[], unsigned count);
+void darr_push(darr* darr, void* data);
 void darr_delete(darr* darr);
-unsigned is_darr_empty(darr darr);
-unsigned is_darr_full(darr darr);
+void darr_reset_cap(darr* darr);
+void darr_reset_count(darr* darr);
+void darr_set_cap(darr* darr, unsigned capacity);
+void darr_double_cap(darr* darr);
+void darr_set_count(darr* darr, unsigned count);
+void darr_inc_count(darr* darr);
+void darr_reset(darr* darr);
 
 #endif
